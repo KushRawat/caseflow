@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: CaseFlow API
+  version: 0.1.0
+servers:
+  - url: https://api.caseflow.local
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /auth/login:
+    post:
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Auth tokens
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Token pair
+  /cases:
+    get:
+      security:
+        - bearerAuth: []
+      summary: List cases with cursor pagination
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated cases
+  /cases/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Case detail with history and notes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Case detail
+  /imports:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create import job metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceName:
+                  type: string
+                totalRows:
+                  type: integer
+      responses:
+        '201':
+          description: Import job
+  /imports/{id}/chunks:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Submit a chunk of normalized rows
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chunk summary

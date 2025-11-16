@@ -1,0 +1,172 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+}
+
+enum CaseCategory {
+  TAX
+  LICENSE
+  PERMIT
+}
+
+enum CasePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum CaseStatus {
+  NEW
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum ImportStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  role          Role           @default(OPERATOR)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+  imports       CaseImport[]   @relation("UserImports")
+  assignedCases Case[]         @relation("CaseAssignee")
+  createdCases  Case[]         @relation("CaseCreator")
+  notes         CaseNote[]
+  histories     CaseHistory[]
+  importAudits  ImportAudit[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+}
+
+model Case {
+  id            String        @id @default(cuid())
+  caseId        String        @unique
+  applicantName String
+  dob           DateTime
+  email         String?
+  phone         String?
+  category      CaseCategory
+  priority      CasePriority  @default(LOW)
+  status        CaseStatus    @default(NEW)
+  assigneeId    String?
+  assignee      User?         @relation("CaseAssignee", fields: [assigneeId], references: [id])
+  createdById   String?
+  createdBy     User?         @relation("CaseCreator", fields: [createdById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  history       CaseHistory[]
+  notes         CaseNote[]
+  importRows    CaseImportRow[]
+}
+
+model CaseHistory {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model CaseNote {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model CaseImport {
+  id           String            @id @default(cuid())
+  status       ImportStatus      @default(DRAFT)
+  sourceName   String?
+  totalRows    Int               @default(0)
+  successCount Int               @default(0)
+  failureCount Int               @default(0)
+  createdAt    DateTime          @default(now())
+  completedAt  DateTime?
+  createdById  String
+  createdBy    User              @relation("UserImports", fields: [createdById], references: [id])
+  chunks       CaseImportChunk[]
+  rows         CaseImportRow[]
+  errors       CaseImportError[]
+  audits       ImportAudit[]
+}
+
+model CaseImportChunk {
+  id         String      @id @default(cuid())
+  importId   String
+  import     CaseImport  @relation(fields: [importId], references: [id])
+  index      Int
+  size       Int
+  success    Int         @default(0)
+  failure    Int         @default(0)
+  processedAt DateTime?
+  createdAt  DateTime    @default(now())
+
+  @@unique([importId, index])
+}
+
+model CaseImportRow {
+  id                String        @id @default(cuid())
+  importId          String
+  import            CaseImport    @relation(fields: [importId], references: [id])
+  caseId            String
+  rawPayload        Json
+  normalizedPayload Json?
+  status            String
+  message           String?
+  caseDbId          String?
+  caseDb            Case?         @relation(fields: [caseDbId], references: [id])
+  createdAt         DateTime      @default(now())
+}
+
+model CaseImportError {
+  id        String     @id @default(cuid())
+  importId  String
+  import    CaseImport @relation(fields: [importId], references: [id])
+  rowNumber Int
+  field     String
+  message   String
+  createdAt DateTime   @default(now())
+}
+
+model ImportAudit {
+  id        String     @id @default(cuid())
+  importId  String
+  import    CaseImport @relation(fields: [importId], references: [id])
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json?
+  createdAt DateTime   @default(now())
+}

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: caseflow
+      POSTGRES_PASSWORD: caseflow
+      POSTGRES_DB: caseflow
+    ports:
+      # - '5432:5432'
+      - '55432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  backend:
+    build:
+      context: ./app/backend
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://caseflow:caseflow@postgres:5432/caseflow?schema=public
+      JWT_ACCESS_SECRET: supersecretaccesskeysupersecretaccesskey
+      JWT_REFRESH_SECRET: supersecretrefreshkeysupersecretrefreshkey
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 7d
+      ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - '4000:4000'
+    command: sh -c "npx prisma migrate deploy && npm run seed:admin && node dist/index.js"
+  frontend:
+    build:
+      context: ./app/frontend
+    depends_on:
+      - backend
+    ports:
+      - '5173:80'
+
+volumes:
+  postgres-data:

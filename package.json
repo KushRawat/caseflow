@@ -1,0 +1,21 @@
+{
+  "name": "caseflow",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "app/frontend",
+    "app/backend"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "build": "npm run build --workspace app/backend && npm run build --workspace app/frontend",
+    "lint": "npm run lint --workspace app/backend && npm run lint --workspace app/frontend",
+    "test": "npm run test --workspace app/backend && npm run test --workspace app/frontend",
+    "typecheck": "npm run typecheck --workspace app/backend && npm run typecheck --workspace app/frontend",
+    "format": "echo \"format handled per workspace\"",
+    "dev": "npm run dev --workspace app/backend & npm run dev --workspace app/frontend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,4 @@
+case_id,applicant_name,dob,email,phone,category,priority
+C-2001,Nia Patel,1992-04-01,nia.patel@example.com,+14155552671,TAX,HIGH
+C-2002,Andre Gomes,1988-11-20,andre.gomes@example.com,+5511999999999,LICENSE,MEDIUM
+C-2003,Sofia Chen,1975-08-15,sofia.chen@example.com,+12025550123,PERMIT,LOW

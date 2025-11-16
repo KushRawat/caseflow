@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: caseflow
+          POSTGRES_PASSWORD: caseflow
+          POSTGRES_DB: caseflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U caseflow" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://caseflow:caseflow@localhost:5432/caseflow?schema=public
+      JWT_ACCESS_SECRET: ciaccesssecretciaccesssecretciaccesssecret
+      JWT_REFRESH_SECRET: cirefreshsecretcirefreshsecretcirefresh
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 7d
+      ALLOWED_ORIGINS: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm install
+      - run: npx prisma generate
+        working-directory: app/backend
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
