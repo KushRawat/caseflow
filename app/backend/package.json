@@ -10,8 +10,8 @@
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" vitest run",
+    "test:watch": "NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" vitest",
     "seed:admin": "tsx src/scripts/seed-admin.ts"
   },
   "dependencies": {
