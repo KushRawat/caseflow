@@ -96,7 +96,7 @@ export const ImportPage = () => {
         try {
             let importId = currentImportId;
             if (!importId) {
-                const job = await createImport({ sourceName: sourceName ?? 'CSV upload', totalRows: rows.length });
+                const job = await createImport({ sourceName: sourceName ?? 'CSV upload', totalRows: validRows.length });
                 importId = job.id;
                 setImportId(importId);
                 setReportImportId(job.id);

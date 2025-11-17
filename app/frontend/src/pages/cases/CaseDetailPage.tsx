@@ -154,7 +154,7 @@ export const CaseDetailPage = () => {
         </ul>
       </section>
 
-      <section>
+      <section className="case-notes">
         <h2>{t('cases.detail.notes', { defaultValue: 'Notes' })}</h2>
         <form
           onSubmit={(event) => {

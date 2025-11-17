@@ -113,9 +113,10 @@ export const importsService = {
     let createdCount = 0;
     let updatedCount = 0;
 
-    await prisma.$transaction(async (tx) => {
-      for (const row of payload.rows) {
-        const rawPayload = JSON.parse(JSON.stringify(row.raw ?? row.data));
+    await prisma.$transaction(
+      async (tx) => {
+        for (const row of payload.rows) {
+          const rawPayload = JSON.parse(JSON.stringify(row.raw ?? row.data));
         try {
           const normalized = normalizeRow(row.data);
           if (seenCaseIds.has(normalized.caseId)) {
@@ -241,8 +242,10 @@ export const importsService = {
             failure: failureCount
           }
         }
-      });
-    });
+        });
+      },
+      { timeout: 60000, maxWait: 5000 }
+    );
 
     const updated = await prisma.caseImport.findUnique({ where: { id: importId } });
     if (!updated) throw new HttpError(404, 'Import missing after chunk processing');

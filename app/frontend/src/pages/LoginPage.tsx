@@ -21,7 +21,8 @@ export const LoginPage = () => {
   const setLoginLayout = uiStore((state) => state.setLoginLayout);
 
   if (user && status === 'authenticated') {
-    return <Navigate to="/import" replace />;
+    const destination = user.role === 'ADMIN' ? '/import' : '/cases';
+    return <Navigate to={destination} replace />;
   }
 
   const onSubmit = async (form: FormData) => {
