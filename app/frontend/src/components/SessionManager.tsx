@@ -103,8 +103,7 @@ export const SessionManager = () => {
 
   const handleSignOut = async () => {
     closeModal();
-    await signOut({ silent: true });
-    notifySuccess('Signed out');
+    await signOut();
     redirectToLogin();
   };
 

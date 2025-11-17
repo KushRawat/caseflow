@@ -357,6 +357,7 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-items: center;
 }
 
 .app-controls {
@@ -390,7 +391,7 @@ textarea:focus {
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -400,9 +401,8 @@ textarea:focus {
 }
 
 .topbar-shell .header-controls {
-  flex: 1 1 100%;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .user-panel {
@@ -431,10 +431,12 @@ textarea:focus {
 
 .app-sidebar .user-panel {
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 1rem;
-  padding: 1rem;
+  padding: 1.25rem;
+  width: 100%;
 }
 
 .app-sidebar .user-panel button {
@@ -456,27 +458,46 @@ textarea:focus {
   gap: 0.75rem;
 }
 
+.control-chip-row.compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
 .app-sidebar .control-chip-row {
   gap: 0.65rem;
+  justify-content: center;
 }
 
 .control-chip {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 160px;
+}
+
+.app-sidebar .control-chip {
+  align-items: center;
+  text-align: center;
 }
 
 .control-chip > span {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--text);
+  opacity: 0.75;
 }
 
 .chip-options {
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+}
+
+.app-sidebar .chip-options {
+  justify-content: center;
 }
 
 .chip {
@@ -492,12 +513,23 @@ textarea:focus {
   gap: 0.35rem;
 }
 
+.app-sidebar .chip {
+  justify-content: center;
+  text-align: center;
+}
+
 .chip small {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: inherit;
   opacity: 0.65;
+}
+
+.chip-heading {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .chip.active {
@@ -514,7 +546,7 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem clamp(1rem, 4vw, 3rem);
+  padding: 0.75rem clamp(1rem, 4vw, 2.5rem);
   background: var(--surface-alt);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -527,7 +559,7 @@ textarea:focus {
 .topbar-shell .app-header {
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .app-brand {
@@ -728,6 +760,7 @@ textarea:focus {
   word-break: break-word;
   vertical-align: top;
 }
+
 
 .cell-wrapper {
   display: flex;
@@ -1128,11 +1161,16 @@ textarea:focus {
 }
 
 .chip-actions button {
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 0.65rem;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--surface-alt);
   font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chip-actions button:disabled {
+  opacity: 0.35;
 }
 
 .bulk-edit-grid {
@@ -1161,6 +1199,7 @@ textarea:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .helper-feedback {

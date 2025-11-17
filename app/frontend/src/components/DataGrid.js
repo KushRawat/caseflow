@@ -21,7 +21,8 @@ export const DataGrid = ({ rows, headers, columnOrder, mapping, selectedRowIds, 
         size: 40
     }), [allSelected, onSelectAll, onToggleRow, selectedRowIds]);
     const dataColumns = useMemo(() => orderedHeaders.map((header) => ({
-        accessorKey: header,
+        id: header,
+        accessorFn: (row) => row.values[header] ?? '',
         header,
         cell: (info) => {
             const row = info.row.original;

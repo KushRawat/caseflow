@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and customize before running plan/apply
+project_name        = "caseflow"
+environment         = "prod"
+aws_region          = "us-east-1"
+backend_image       = "123456789012.dkr.ecr.us-east-1.amazonaws.com/caseflow:latest"
+db_username         = "caseflow"
+db_password         = "change-me-super-secure"
+jwt_access_secret   = "replace-with-long-random-string"
+jwt_refresh_secret  = "replace-with-longer-random-string"
+allowed_origins     = "https://caseflow-frontend.vercel.app"
+frontend_bucket_name = "caseflow-prod-frontend"
+tags = {
+  Owner = "you@example.com"
+}

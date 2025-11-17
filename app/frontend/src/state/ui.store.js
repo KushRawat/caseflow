@@ -3,7 +3,7 @@ const THEME_STORAGE_KEY = 'caseflow-theme';
 export const uiStore = create((set, get) => ({
     loginLayout: 'hero',
     dashboardLayout: 'sidebar',
-    theme: 'light',
+    theme: 'system',
     setLoginLayout: (layout) => set({ loginLayout: layout }),
     toggleLoginLayout: () => set({ loginLayout: get().loginLayout === 'hero' ? 'classic' : 'hero' }),
     setDashboardLayout: (layout) => set({ dashboardLayout: layout }),
@@ -15,18 +15,19 @@ export const uiStore = create((set, get) => ({
         set({ theme });
     },
     toggleTheme: () => {
-        const next = get().theme === 'light' ? 'dark' : 'light';
+        const current = get().theme;
+        const next = current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
         get().setTheme(next);
     },
     hydrateTheme: () => {
         if (typeof window === 'undefined')
             return;
         const stored = localStorage.getItem(THEME_STORAGE_KEY);
-        if (stored === 'light' || stored === 'dark') {
+        if (stored === 'light' || stored === 'dark' || stored === 'system') {
             set({ theme: stored });
             return;
         }
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        set({ theme: prefersDark ? 'dark' : 'light' });
+        localStorage.setItem(THEME_STORAGE_KEY, 'system');
+        set({ theme: 'system' });
     }
 }));

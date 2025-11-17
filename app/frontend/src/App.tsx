@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect } from 'react';
+import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { LoginPage } from './pages/LoginPage';
 import { CaseDetailPage } from './pages/cases/CaseDetailPage';
@@ -12,10 +12,8 @@ import { UnauthRoute } from './routes/UnauthRoute';
 import { authStore } from './state/auth.store';
 import { uiStore } from './state/ui.store';
 import { UploadDock } from './components/UploadDock';
-import { notifySuccess } from './utils/toast';
 
 const App = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const user = authStore((state) => state.user);
   const signOut = authStore((state) => state.signOut);
@@ -29,9 +27,23 @@ const App = () => {
     hydrateTheme();
   }, [hydrateTheme]);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+  const applyTheme = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolved = theme === 'system' ? (prefersDark ? 'dark' : 'light') : theme;
+    document.documentElement.dataset.theme = resolved;
   }, [theme]);
+
+  useEffect(() => {
+    applyTheme();
+    if (theme !== 'system' || typeof window === 'undefined') {
+      return;
+    }
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => applyTheme();
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, [applyTheme, theme]);
 
   const roleLabel = user?.role === 'ADMIN' ? 'Admin' : 'Operator';
   const navItems = [
@@ -45,8 +57,7 @@ const App = () => {
   ];
 
   const handleSignOut = () => {
-    void signOut({ silent: true }).finally(() => {
-      notifySuccess('Signed out');
+    void signOut().finally(() => {
       navigate('/login', { replace: true });
     });
   };
@@ -56,15 +67,16 @@ const App = () => {
     { label: 'Top bar', value: 'topbar', hint: 'Wide cases view' }
   ];
 
-  const themeOptions: Array<{ label: string; value: 'light' | 'dark'; icon: string }> = [
+  const themeOptions: Array<{ label: string; value: 'light' | 'dark' | 'system'; icon: string }> = [
     { label: 'Light', value: 'light', icon: '🌤️' },
-    { label: 'Dark', value: 'dark', icon: '🌙' }
+    { label: 'Dark', value: 'dark', icon: '🌙' },
+    { label: 'System', value: 'system', icon: '🖥️' }
   ];
 
   const quickControls = (
-    <div className="control-chip-row">
+    <div className="control-chip-row compact">
       <div className="control-chip">
-        <span>Dashboard layout</span>
+        <span>Layout</span>
         <div className="chip-options">
           {layoutOptions.map((option) => (
             <button
@@ -73,8 +85,8 @@ const App = () => {
               className={`chip ${dashboardLayout === option.value ? 'active' : ''}`}
               onClick={() => setDashboardLayout(option.value)}
             >
+              <span className="chip-heading">{option.label}</span>
               <small>{option.hint}</small>
-              {option.label}
             </button>
           ))}
         </div>
@@ -189,10 +201,7 @@ const App = () => {
         <header className="app-header">
           <div className="app-brand">
             <div className="logo">CF</div>
-            <div>
-              <strong>CaseFlow</strong>
-              <p className="text-muted">Ops control center</p>
-            </div>
+            <strong>CaseFlow</strong>
           </div>
           <nav className="app-nav">
             {navItems.map((item) => (

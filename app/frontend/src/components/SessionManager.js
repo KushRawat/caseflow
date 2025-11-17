@@ -97,8 +97,7 @@ export const SessionManager = () => {
     };
     const handleSignOut = async () => {
         closeModal();
-        await signOut({ silent: true });
-        notifySuccess('Signed out');
+        await signOut();
         redirectToLogin();
     };
     return _jsx(SessionModal, { open: isOpen, countdown: countdown, onRefresh: handleRefresh, onSignOut: handleSignOut });

@@ -17,3 +17,6 @@ playwright-report
 playwright/.cache
 .cypress-cache
 *.tsbuildinfo
+.terraform/
+*.tfstate
+*.tfstate.backup
