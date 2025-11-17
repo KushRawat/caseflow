@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" tsc -b && NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" vitest run",
+    "test:watch": "NODE_OPTIONS=\"--require ./scripts/setup-webcrypto.cjs\" vitest",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test -c e2e/playwright.config.ts"

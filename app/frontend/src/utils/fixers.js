@@ -16,8 +16,13 @@ const normalizePhone = (input) => {
     }
     return `+${digits}`;
 };
+const normalizeCaseId = (value) => value.trim().toUpperCase();
+const normalizeEmail = (value) => value.trim().toLowerCase();
 export const fixers = {
     trimAll: (value) => value.trim(),
     titleCase: (value) => (value ? toTitleCase(value) : value),
-    normalizePhone: (value) => (value ? normalizePhone(value) : value)
+    normalizePhone: (value) => (value ? normalizePhone(value) : value),
+    normalizeCaseId: (value) => (value ? normalizeCaseId(value) : value),
+    normalizeEmail: (value) => (value ? normalizeEmail(value) : value),
+    defaultPriority: (value) => (value ? value.toUpperCase() : 'LOW')
 };

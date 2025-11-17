@@ -4,9 +4,10 @@ interface ColumnManagerProps {
   headers: string[];
   columnOrder: string[];
   onChange: (order: string[]) => void;
+  disabled?: boolean;
 }
 
-export const ColumnManager = ({ headers, columnOrder, onChange }: ColumnManagerProps) => {
+export const ColumnManager = ({ headers, columnOrder, onChange, disabled = false }: ColumnManagerProps) => {
   const [order, setOrder] = useState<string[]>(columnOrder.length ? columnOrder : headers);
 
   useEffect(() => {
@@ -29,36 +30,43 @@ export const ColumnManager = ({ headers, columnOrder, onChange }: ColumnManagerP
   };
 
   return (
-    <section className="surface-card">
+    <section className="surface-card" aria-disabled={disabled}>
       <div className="section-title">
         <div>
           <h2>Column arrangement</h2>
-          <p className="text-muted">Reorder visible columns to match your preferred workflow.</p>
+          <p className="text-muted">
+            Reorder how columns appear in the review grid—changes apply instantly and help during validation.
+          </p>
         </div>
-        <button type="button" className="ghost" onClick={resetOrder}>
+        <button type="button" className="ghost" onClick={resetOrder} disabled={disabled}>
           Reset
         </button>
       </div>
-      <ul className="column-order-list">
+      <div className="column-grid">
         {order.map((header, index) => (
-          <li key={header} className="column-order-item">
+          <div key={header} className="column-chip">
             <span>{header}</span>
-            <div>
-              <button type="button" onClick={() => moveColumn(index, -1)} disabled={index === 0} aria-label="Move left">
+            <div className="chip-actions">
+              <button
+                type="button"
+                onClick={() => moveColumn(index, -1)}
+                disabled={index === 0 || disabled}
+                aria-label="Move column earlier"
+              >
                 ↑
               </button>
               <button
                 type="button"
                 onClick={() => moveColumn(index, 1)}
-                disabled={index === order.length - 1}
-                aria-label="Move right"
+                disabled={index === order.length - 1 || disabled}
+                aria-label="Move column later"
               >
                 ↓
               </button>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 };

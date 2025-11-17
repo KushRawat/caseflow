@@ -2,24 +2,39 @@ import bcrypt from 'bcryptjs';
 
 import { prisma } from '../lib/prisma.js';
 
-const email = process.env.ADMIN_EMAIL ?? 'admin@example.com';
-const password = process.env.ADMIN_PASSWORD ?? 'Password123!';
+const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com';
+const adminPassword = process.env.ADMIN_PASSWORD ?? 'Password123!';
+const operatorEmail = process.env.OPERATOR_EMAIL ?? 'operator@example.com';
+const operatorPassword = process.env.OPERATOR_PASSWORD ?? 'Operator123!';
 
 async function main() {
-  const hash = await bcrypt.hash(password, 10);
+  const adminHash = await bcrypt.hash(adminPassword, 10);
+  const operatorHash = await bcrypt.hash(operatorPassword, 10);
   await prisma.user.upsert({
-    where: { email },
+    where: { email: adminEmail },
     update: {
-      passwordHash: hash,
+      passwordHash: adminHash,
       role: 'ADMIN'
     },
     create: {
-      email,
-      passwordHash: hash,
+      email: adminEmail,
+      passwordHash: adminHash,
       role: 'ADMIN'
     }
   });
-  console.log(`Seeded admin ${email}`);
+  await prisma.user.upsert({
+    where: { email: operatorEmail },
+    update: {
+      passwordHash: operatorHash,
+      role: 'OPERATOR'
+    },
+    create: {
+      email: operatorEmail,
+      passwordHash: operatorHash,
+      role: 'OPERATOR'
+    }
+  });
+  console.log(`Seeded admin ${adminEmail} and operator ${operatorEmail}`);
 }
 
 main()

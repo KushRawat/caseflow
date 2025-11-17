@@ -31,8 +31,8 @@ export const caseRowSchema = z.object({
 });
 
 export const caseFiltersSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(5),
   cursor: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).default(25),
   status: z.enum(['NEW', 'IN_PROGRESS', 'COMPLETED', 'FAILED']).optional(),
   category: z.enum(['TAX', 'LICENSE', 'PERMIT']).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),

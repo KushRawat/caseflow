@@ -1,7 +1,11 @@
 FROM node:20-alpine AS builder
+ENV NPM_CONFIG_FETCH_TIMEOUT=120000 \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_FACTOR=2 \
+    NPM_CONFIG_REGISTRY=https://registry.npmjs.org/
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm install --no-audit --no-fund
 COPY tsconfig*.json vite.config.ts vitest.setup.ts ./
 COPY scripts ./scripts
 COPY .env* ./

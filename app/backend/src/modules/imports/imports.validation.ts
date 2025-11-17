@@ -23,7 +23,7 @@ export const chunkPayloadSchema = z.object({
 
 export const importFiltersSchema = z.object({
   cursor: z.string().optional(),
-  limit: z.coerce.number().min(1).max(50).default(20)
+  limit: z.coerce.number().int().min(1).max(50).default(5)
 });
 
 export type CreateImportInput = z.infer<typeof createImportSchema>;

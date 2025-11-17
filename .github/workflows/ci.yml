@@ -27,7 +27,7 @@ jobs:
       ACCESS_TOKEN_TTL: 15m
       REFRESH_TOKEN_TTL: 7d
       ALLOWED_ORIGINS: http://localhost:5173
-    steps:
+    steps: 
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

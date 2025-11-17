@@ -5,22 +5,34 @@ import type { ChunkPayloadInput, CreateImportInput, ImportFiltersInput } from '.
 
 export const importsService = {
   async listImports(userId: string, filters: ImportFiltersInput) {
-    const take = filters.limit + 1;
-    const rows = await prisma.caseImport.findMany({
-      where: { createdById: userId },
-      orderBy: { createdAt: 'desc' },
-      take,
-      skip: filters.cursor ? 1 : 0,
-      cursor: filters.cursor ? { id: filters.cursor } : undefined
-    });
+    const limit = filters.limit;
+    const cursor = filters.cursor;
 
-    let nextCursor: string | null = null;
-    if (rows.length > filters.limit) {
-      const next = rows.pop();
-      nextCursor = next?.id ?? null;
-    }
+    const [records, total] = await Promise.all([
+      prisma.caseImport.findMany({
+        where: { createdById: userId },
+        orderBy: { createdAt: 'desc' },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0,
+        include: {
+          createdBy: { select: { id: true, email: true } }
+        }
+      }),
+      prisma.caseImport.count({ where: { createdById: userId } })
+    ]);
 
-    return { data: rows, nextCursor };
+    const hasNext = records.length > limit;
+    const imports = hasNext ? records.slice(0, limit) : records;
+    const nextCursor = hasNext ? imports[imports.length - 1]?.id ?? null : null;
+
+    return {
+      imports,
+      pageSize: limit,
+      total,
+      hasNext,
+      nextCursor
+    };
   },
 
   getImport(importId: string, userId: string) {
@@ -28,7 +40,8 @@ export const importsService = {
       where: { id: importId, createdById: userId },
       include: {
         errors: true,
-        chunks: { orderBy: { index: 'asc' } }
+        chunks: { orderBy: { index: 'asc' } },
+        audits: { orderBy: { createdAt: 'desc' } }
       }
     });
   },
@@ -58,7 +71,7 @@ export const importsService = {
   },
 
   async createImport(userId: string, input: CreateImportInput) {
-    return prisma.caseImport.create({
+    const job = await prisma.caseImport.create({
       data: {
         sourceName: input.sourceName,
         totalRows: input.totalRows,
@@ -66,6 +79,20 @@ export const importsService = {
         status: 'DRAFT'
       }
     });
+
+    await prisma.importAudit.create({
+      data: {
+        importId: job.id,
+        userId,
+        action: 'IMPORT_CREATED',
+        metadata: {
+          sourceName: input.sourceName,
+          totalRows: input.totalRows
+        }
+      }
+    });
+
+    return job;
   },
 
   async processChunk(importId: string, userId: string, payload: ChunkPayloadInput) {
@@ -83,6 +110,8 @@ export const importsService = {
     const seenCaseIds = new Set<string>();
     let successCount = 0;
     let failureCount = 0;
+    let createdCount = 0;
+    let updatedCount = 0;
 
     await prisma.$transaction(async (tx) => {
       for (const row of payload.rows) {
@@ -99,6 +128,7 @@ export const importsService = {
             throw new HttpError(400, `Duplicate case_id across file: ${normalized.caseId}`);
           }
 
+          const existingCase = await tx.case.findUnique({ where: { caseId: normalized.caseId } });
           const caseRecord = await tx.case.upsert({
             where: { caseId: normalized.caseId },
             create: {
@@ -122,6 +152,12 @@ export const importsService = {
               status: normalized.status
             }
           });
+
+          if (existingCase) {
+            updatedCount += 1;
+          } else {
+            createdCount += 1;
+          }
 
           await tx.caseImportRow.create({
             data: {
@@ -192,6 +228,20 @@ export const importsService = {
           failureCount: { increment: failureCount }
         }
       });
+
+      await tx.importAudit.create({
+        data: {
+          importId,
+          userId,
+          action: 'CHUNK_PROCESSED',
+          metadata: {
+            chunkIndex: payload.chunkIndex,
+            size: payload.rows.length,
+            success: successCount,
+            failure: failureCount
+          }
+        }
+      });
     });
 
     const updated = await prisma.caseImport.findUnique({ where: { id: importId } });
@@ -205,8 +255,22 @@ export const importsService = {
           completedAt: new Date()
         }
       });
+
+      await prisma.importAudit.create({
+        data: {
+          importId,
+          userId,
+          action: 'IMPORT_COMPLETED',
+          metadata: {
+            successCount: updated.successCount,
+            failureCount: updated.failureCount,
+            totalRows: updated.totalRows,
+            status: updated.failureCount ? 'FAILED' : 'COMPLETED'
+          }
+        }
+      });
     }
 
-    return { successCount, failureCount };
+    return { successCount, failureCount, createdCount, updatedCount };
   }
 };

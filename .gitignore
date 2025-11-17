@@ -16,3 +16,4 @@ postgres-data
 playwright-report
 playwright/.cache
 .cypress-cache
+*.tsbuildinfo

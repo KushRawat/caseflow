@@ -18,7 +18,7 @@ export const LoginPage = () => {
   const signIn = authStore((state) => state.signIn);
   const error = authStore((state) => state.error);
   const loginLayout = uiStore((state) => state.loginLayout);
-  const toggleLoginLayout = uiStore((state) => state.toggleLoginLayout);
+  const setLoginLayout = uiStore((state) => state.setLoginLayout);
 
   if (user && status === 'authenticated') {
     return <Navigate to="/import" replace />;
@@ -33,13 +33,13 @@ export const LoginPage = () => {
   };
 
   const formFields = (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <label>
-        {t('login.email')}
+    <form onSubmit={handleSubmit(onSubmit)} className="login-form-fields">
+      <label className="form-field">
+        <span>{t('login.email')}</span>
         <input type="email" {...register('email', { required: true })} autoComplete="email" />
       </label>
-      <label>
-        {t('login.password')}
+      <label className="form-field">
+        <span>{t('login.password')}</span>
         <input type="password" {...register('password', { required: true })} autoComplete="current-password" />
       </label>
       {error && <p className="error-text">{error}</p>}
@@ -89,10 +89,25 @@ export const LoginPage = () => {
   return (
     <div className="login-wrapper">
       <div className="layout-toggle">
-        <span>Login layout</span>
-        <button type="button" className="ghost" onClick={toggleLoginLayout}>
-          Switch to {loginLayout === 'hero' ? 'classic' : 'hero'}
-        </button>
+        <div>
+          <span>Login layout</span>
+          <p className="text-muted">Choose the experience that fits your workflow.</p>
+        </div>
+        <div className="segment-controls">
+          {[
+            { id: 'hero', label: 'Showcase' },
+            { id: 'classic', label: 'Compact' }
+          ].map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={loginLayout === option.id ? 'active' : ''}
+              onClick={() => setLoginLayout(option.id as 'hero' | 'classic')}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
       {loginLayout === 'hero' ? heroLayout : classicLayout}
     </div>

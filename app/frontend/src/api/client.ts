@@ -1,7 +1,7 @@
-import { toast } from 'react-hot-toast';
+import { requestStore } from '../state/request.store';
+import { notifyError, notifySuccess } from '../utils/toast';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
-
 type ApiEnvelope<T> = {
   success: boolean;
   message?: string;
@@ -13,8 +13,19 @@ type ApiEnvelope<T> = {
 type TokenProvider = () => string | undefined;
 let tokenProvider: TokenProvider | undefined;
 
+type AuthHandlers = {
+  refreshSession?: () => Promise<boolean>;
+  signOut?: (options?: { silent?: boolean; message?: string }) => Promise<void>;
+};
+
+let authHandlers: AuthHandlers = {};
+
 export const setTokenProvider = (provider: TokenProvider) => {
   tokenProvider = provider;
+};
+
+export const registerAuthHandlers = (handlers: AuthHandlers) => {
+  authHandlers = handlers;
 };
 
 class ApiClient {
@@ -53,27 +64,48 @@ class ApiClient {
     }
   }
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await this.fetchWithAuth(path, init);
+  private async request<T>(path: string, init?: RequestInit, options?: { retryOnAuthError?: boolean }): Promise<T> {
+    const shouldRetryAuth = options?.retryOnAuthError ?? true;
+    requestStore.getState().start();
+    try {
+      let response: Response;
+      try {
+        response = await this.fetchWithAuth(path, init);
+      } catch (networkError) {
+        notifyError('Unable to reach the server. Please check your connection and try again.');
+        throw networkError;
+      }
+      if (response.status === 401) {
+        if (shouldRetryAuth && (await authHandlers.refreshSession?.())) {
+          return this.request<T>(path, init, { retryOnAuthError: false });
+        }
+        const sessionMessage = 'Session expired. Please sign in again.';
+        await authHandlers.signOut?.({ silent: true });
+        notifyError(sessionMessage);
+        throw new Error(sessionMessage);
+      }
+      if (response.status === 204) {
+        notifySuccess('Completed');
+        return {} as T;
+      }
 
-    if (response.status === 204) {
-      toast.success('Completed');
-      return {} as T;
+      const body: ApiEnvelope<T> = await response.json().catch(() => ({ success: false } as ApiEnvelope<T>));
+
+      if (!response.ok || !body.success) {
+        const message = body.error ?? body.message ?? 'Request failed';
+        notifyError(message);
+        throw new Error(message);
+      }
+
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (body.message && method !== 'GET') {
+        notifySuccess(body.message);
+      }
+
+      return (body.data ?? ({} as T)) as T;
+    } finally {
+      requestStore.getState().stop();
     }
-
-    const body: ApiEnvelope<T> = await response.json().catch(() => ({ success: false } as ApiEnvelope<T>));
-
-    if (!response.ok || !body.success) {
-      const message = body.error ?? body.message ?? 'Request failed';
-      toast.error(message);
-      throw new Error(message);
-    }
-
-    if (body.message) {
-      toast.success(body.message);
-    }
-
-    return (body.data ?? ({} as T)) as T;
   }
 
   get<T>(path: string) {
@@ -89,13 +121,24 @@ class ApiClient {
   }
 
   async download(path: string, init?: RequestInit) {
-    const response = await this.fetchWithAuth(path, init);
-    if (!response.ok) {
-      const message = await this.parseError(response);
-      toast.error(message);
-      throw new Error(message);
+    requestStore.getState().start();
+    try {
+      let response: Response;
+      try {
+        response = await this.fetchWithAuth(path, init);
+      } catch (networkError) {
+        notifyError('Unable to reach the server. Please check your connection and try again.');
+        throw networkError;
+      }
+      if (!response.ok) {
+        const message = await this.parseError(response);
+        notifyError(message);
+        throw new Error(message);
+      }
+      return response;
+    } finally {
+      requestStore.getState().stop();
     }
-    return response;
   }
 }
 

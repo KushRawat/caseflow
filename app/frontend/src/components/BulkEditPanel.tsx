@@ -9,7 +9,11 @@ const editableFields = [
 
 type EditableField = 'priority' | 'category';
 
-export const BulkEditPanel = () => {
+type BulkEditPanelProps = {
+  disabled?: boolean;
+};
+
+export const BulkEditPanel = ({ disabled = false }: BulkEditPanelProps) => {
   const selectedRowIds = importStore((state) => state.selectedRowIds);
   const setFieldValue = importStore((state) => state.setFieldValue);
   const clearSelection = importStore((state) => state.clearSelection);
@@ -27,21 +31,25 @@ export const BulkEditPanel = () => {
   const mappedField = mapping[activeField];
 
   return (
-    <section className="surface-card">
+    <section className="surface-card" aria-disabled={disabled}>
       <div className="section-title">
         <div>
           <h2>Bulk edit</h2>
           <p className="text-muted">Update mapped fields for selected rows or the entire sheet.</p>
         </div>
-        <button type="button" className="ghost" onClick={clearSelection} disabled={selectedRowIds.length === 0}>
+        <button type="button" className="ghost" onClick={clearSelection} disabled={selectedRowIds.length === 0 || disabled}>
           Clear selection ({selectedRowIds.length})
         </button>
       </div>
       {!mappedField && <p className="error-text">Map {fieldMeta.label} to a CSV column before editing.</p>}
       <div className="bulk-edit-grid">
-        <label>
-          Field
-          <select value={activeField} onChange={(event) => setActiveField(event.target.value as EditableField)}>
+        <label className="form-field">
+          <span>Field</span>
+          <select
+            value={activeField}
+            onChange={(event) => setActiveField(event.target.value as EditableField)}
+            disabled={disabled}
+          >
             {editableFields.map((field) => (
               <option key={field.id} value={field.id}>
                 {field.label}
@@ -49,24 +57,25 @@ export const BulkEditPanel = () => {
             ))}
           </select>
         </label>
-        <label>
-          Value
-          <select value={value} onChange={(event) => setValue(event.target.value)}>
+        <label className="form-field">
+          <span>Value</span>
+          <select value={value} onChange={(event) => setValue(event.target.value)} disabled={disabled}>
             {fieldMeta.options.map((option) => (
               <option key={option}>{option}</option>
             ))}
           </select>
         </label>
       </div>
-      <div className="helper-actions">
+      <div className="bulk-edit-actions">
         <button
           type="button"
+          className="ghost"
           onClick={() => handleApply('selected')}
-          disabled={selectedRowIds.length === 0 || !mappedField}
+          disabled={selectedRowIds.length === 0 || !mappedField || disabled}
         >
           Apply to {selectedRowIds.length || 0} selected rows
         </button>
-        <button type="button" onClick={() => handleApply('all')} disabled={!mappedField}>
+        <button type="button" className="primary" onClick={() => handleApply('all')} disabled={!mappedField || disabled}>
           Apply to entire column
         </button>
       </div>

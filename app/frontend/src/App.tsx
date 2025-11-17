@@ -1,14 +1,18 @@
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import { LoginPage } from './pages/LoginPage';
 import { CaseDetailPage } from './pages/cases/CaseDetailPage';
 import { CasesPage } from './pages/cases/CasesPage';
 import { ImportPage } from './pages/import/ImportPage';
+import { ImportHistoryPage } from './pages/import/ImportHistoryPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { UnauthRoute } from './routes/UnauthRoute';
 import { authStore } from './state/auth.store';
 import { uiStore } from './state/ui.store';
+import { UploadDock } from './components/UploadDock';
+import { notifySuccess } from './utils/toast';
 
 const App = () => {
   const location = useLocation();
@@ -16,12 +20,99 @@ const App = () => {
   const user = authStore((state) => state.user);
   const signOut = authStore((state) => state.signOut);
   const dashboardLayout = uiStore((state) => state.dashboardLayout);
-  const toggleDashboardLayout = uiStore((state) => state.toggleDashboardLayout);
+  const setDashboardLayout = uiStore((state) => state.setDashboardLayout);
+  const theme = uiStore((state) => state.theme);
+  const hydrateTheme = uiStore((state) => state.hydrateTheme);
+  const setTheme = uiStore((state) => state.setTheme);
 
+  useEffect(() => {
+    hydrateTheme();
+  }, [hydrateTheme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const roleLabel = user?.role === 'ADMIN' ? 'Admin' : 'Operator';
   const navItems = [
-    { label: 'Import', to: '/import' },
+    ...(user?.role === 'ADMIN'
+      ? [
+          { label: 'Import workspace', to: '/import' },
+          { label: 'Recent imports', to: '/imports/history' }
+        ]
+      : []),
     { label: 'Cases', to: '/cases' }
   ];
+
+  const handleSignOut = () => {
+    void signOut({ silent: true }).finally(() => {
+      notifySuccess('Signed out');
+      navigate('/login', { replace: true });
+    });
+  };
+
+  const layoutOptions: Array<{ label: string; value: 'sidebar' | 'topbar'; hint: string }> = [
+    { label: 'Sidebar', value: 'sidebar', hint: 'Ops workspace' },
+    { label: 'Top bar', value: 'topbar', hint: 'Wide cases view' }
+  ];
+
+  const themeOptions: Array<{ label: string; value: 'light' | 'dark'; icon: string }> = [
+    { label: 'Light', value: 'light', icon: '🌤️' },
+    { label: 'Dark', value: 'dark', icon: '🌙' }
+  ];
+
+  const quickControls = (
+    <div className="control-chip-row">
+      <div className="control-chip">
+        <span>Dashboard layout</span>
+        <div className="chip-options">
+          {layoutOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`chip ${dashboardLayout === option.value ? 'active' : ''}`}
+              onClick={() => setDashboardLayout(option.value)}
+            >
+              <small>{option.hint}</small>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="control-chip">
+        <span>Theme</span>
+        <div className="chip-options">
+          {themeOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`chip ${theme === option.value ? 'active' : ''}`}
+              onClick={() => setTheme(option.value)}
+            >
+              <span aria-hidden>{option.icon}</span>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? 'C';
+  const userPanel = (
+    <div className="user-panel">
+      <div className="avatar-pill" aria-hidden>
+        {userInitial}
+      </div>
+      <div>
+        <p>{user?.email}</p>
+        <span className="role-pill">{roleLabel}</span>
+      </div>
+      <button type="button" className="ghost" onClick={handleSignOut}>
+        Sign out
+      </button>
+    </div>
+  );
 
   const routes = (
     <Routes>
@@ -33,14 +124,26 @@ const App = () => {
           </UnauthRoute>
         }
       />
-      <Route
-        path="/import"
-        element={
-          <ProtectedRoute>
-            <ImportPage />
-          </ProtectedRoute>
-        }
-      />
+      {user?.role === 'ADMIN' && (
+        <>
+          <Route
+            path="/import"
+            element={
+              <ProtectedRoute>
+                <ImportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/imports/history"
+            element={
+              <ProtectedRoute>
+                <ImportHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+        </>
+      )}
       <Route
         path="/cases"
         element={
@@ -62,10 +165,19 @@ const App = () => {
     </Routes>
   );
 
+  const skipLink = (
+    <a className="skip-link" href="#main-content">
+      Skip to main content
+    </a>
+  );
+
   if (!user) {
     return (
       <div className="app-shell auth-shell">
-        <main className="auth-main">{routes}</main>
+        {skipLink}
+        <main className="auth-main" id="main-content">
+          {routes}
+        </main>
       </div>
     );
   }
@@ -73,6 +185,7 @@ const App = () => {
   if (dashboardLayout === 'topbar') {
     return (
       <div className="app-shell topbar-shell">
+        {skipLink}
         <header className="app-header">
           <div className="app-brand">
             <div className="logo">CF</div>
@@ -81,42 +194,29 @@ const App = () => {
               <p className="text-muted">Ops control center</p>
             </div>
           </div>
-          <div className="app-nav">
+          <nav className="app-nav">
             {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`nav-pill ${location.pathname.startsWith(item.to) ? 'active' : ''}`}
-              >
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-pill ${isActive ? 'active' : ''}`}>
                 {item.label}
-              </Link>
+              </NavLink>
             ))}
-            <div className="user-chip">
-              <span>{user.email}</span>
-              <div className="layout-switch">
-                <small>Layout</small>
-                <button type="button" className="ghost" onClick={toggleDashboardLayout}>
-                  Switch to sidebar
-                </button>
-              </div>
-              <button
-                className="ghost"
-                onClick={() => {
-                  void signOut().finally(() => navigate('/login', { replace: true }));
-                }}
-              >
-                Sign out
-              </button>
-            </div>
+          </nav>
+          <div className="header-controls">
+            {quickControls}
+            {userPanel}
           </div>
         </header>
-        <main className="app-main">{routes}</main>
+        <main className="app-main" id="main-content">
+          {routes}
+        </main>
+        <UploadDock />
       </div>
     );
   }
 
   return (
     <div className="app-shell with-sidebar">
+      {skipLink}
       <aside className="app-sidebar">
         <div className="sidebar-logo">
           <div className="logo">CF</div>
@@ -127,34 +227,18 @@ const App = () => {
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`sidebar-link ${location.pathname.startsWith(item.to) ? 'active' : ''}`}
-            >
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
               {item.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <div className="layout-switch">
-            <small>Layout</small>
-            <button type="button" className="ghost" onClick={toggleDashboardLayout}>
-              Switch to top bar
-            </button>
-          </div>
-          <p>{user.email}</p>
-          <button
-            className="ghost"
-            onClick={() => {
-              void signOut().finally(() => navigate('/login', { replace: true }));
-            }}
-          >
-            Sign out
-          </button>
-        </div>
+        <div className="sidebar-section">{quickControls}</div>
+        <div className="sidebar-section">{userPanel}</div>
       </aside>
-      <main className="app-main">{routes}</main>
+      <main className="app-main" id="main-content">
+        {routes}
+      </main>
+      <UploadDock />
     </div>
   );
 };

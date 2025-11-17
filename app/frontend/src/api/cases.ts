@@ -1,15 +1,29 @@
 import { apiClient } from './client';
-import type { CaseDetail, CaseRecord, PaginatedResponse } from './types';
+import type { CaseDetail, CaseRecord, CasesResponse } from './types';
 
-export const fetchCases = (params: Record<string, string | number | undefined>) => {
+type CaseQueryParams = {
+  status?: string;
+  category?: string;
+  priority?: string;
+  assigneeId?: string;
+  from?: string;
+  to?: string;
+  search?: string;
+  limit?: number;
+  cursor?: string | null;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+};
+
+export const fetchCases = (params: CaseQueryParams) => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      query.set(key, String(value));
-    }
+    if (value === undefined || value === null || value === '') return;
+    if (key === 'cursor' && !value) return;
+    query.set(key, String(value));
   });
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  return apiClient.get<PaginatedResponse<CaseRecord>>(`/cases${suffix}`);
+  return apiClient.get<CasesResponse>(`/cases${suffix}`);
 };
 
 export const fetchCase = (caseId: string) => apiClient.get<CaseDetail>(`/cases/${caseId}`);

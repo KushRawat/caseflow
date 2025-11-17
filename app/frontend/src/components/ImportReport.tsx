@@ -1,14 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { downloadImportErrorsCsv, fetchImport } from '../api/imports';
-import type { ImportError } from '../api/types';
+import type { ImportAuditEntry, ImportError } from '../api/types';
 
 interface ImportReportProps {
   importId: string;
 }
 
+const formatAuditMessage = (audit: ImportAuditEntry) => {
+  const metadata = (audit.metadata ?? {}) as Record<string, unknown>;
+  switch (audit.action) {
+    case 'IMPORT_CREATED':
+      return `Import created – ${metadata.totalRows ?? 'unknown'} rows from ${metadata.sourceName ?? 'CSV'}`;
+    case 'CHUNK_PROCESSED': {
+      const index = typeof metadata.chunkIndex === 'number' ? metadata.chunkIndex : Number(metadata.chunkIndex ?? 0);
+      return `Chunk #${Number.isNaN(index) ? '?' : index + 1} processed (${metadata.success ?? 0} success / ${metadata.failure ?? 0} failed)`;
+    }
+    case 'IMPORT_COMPLETED':
+      return `Import completed (${metadata.successCount ?? 0} success / ${metadata.failureCount ?? 0} failed)`;
+    default:
+      return audit.action;
+  }
+};
+
 export const ImportReport = ({ importId }: ImportReportProps) => {
+  const { t } = useTranslation();
   const [downloading, setDownloading] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ['import-report', importId],
@@ -18,6 +36,7 @@ export const ImportReport = ({ importId }: ImportReportProps) => {
   });
 
   const topErrors = useMemo<ImportError[]>(() => (data?.errors ?? []).slice(0, 5), [data?.errors]);
+  const topAudits = useMemo<ImportAuditEntry[]>(() => (data?.audits ?? []).slice(0, 5), [data?.audits]);
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -39,7 +58,7 @@ export const ImportReport = ({ importId }: ImportReportProps) => {
   if (isLoading) {
     return (
       <section className="surface-card">
-        <h2>Import report</h2>
+        <h2>{t('import.reportHeading', { defaultValue: 'Import report' })}</h2>
         <p>Loading latest stats…</p>
       </section>
     );
@@ -48,11 +67,13 @@ export const ImportReport = ({ importId }: ImportReportProps) => {
   if (!data) return null;
 
   return (
-    <section className="surface-card">
+    <section className="surface-card" aria-live="polite">
       <div className="section-title">
         <div>
-          <h2>Import report</h2>
-          <p className="text-muted">Track successes, failures, and export validation errors.</p>
+          <h2>{t('import.reportHeading', { defaultValue: 'Import report' })}</h2>
+          <p className="text-muted">
+            {t('import.reportSubheading', { defaultValue: 'Track successes, failures, and export validation errors.' })}
+          </p>
         </div>
         <span className={`badge ${data.failureCount ? 'danger' : 'success'}`}>{data.status}</span>
       </div>
@@ -80,11 +101,11 @@ export const ImportReport = ({ importId }: ImportReportProps) => {
           <p className="text-muted">Showing up to five recent issues.</p>
         </div>
         <button type="button" className="ghost" onClick={handleDownload} disabled={downloading}>
-          {downloading ? <span className="spinner" aria-hidden /> : 'Download CSV'}
+          {downloading ? <span className="spinner" aria-hidden /> : t('import.downloadCsv', { defaultValue: 'Download CSV' })}
         </button>
       </div>
       {topErrors.length === 0 ? (
-        <p>No errors recorded for this import 🎉</p>
+        <p>{t('import.noErrors', { defaultValue: 'No errors recorded for this import 🎉' })}</p>
       ) : (
         <table className="table compact">
           <thead>
@@ -104,6 +125,23 @@ export const ImportReport = ({ importId }: ImportReportProps) => {
             ))}
           </tbody>
         </table>
+      )}
+      <div className="toolbar">
+        <div>
+          <h3>{t('import.auditHeading', { defaultValue: 'Audit trail' })}</h3>
+          <p className="text-muted">{t('import.auditSubheading', { defaultValue: 'Latest events for this batch.' })}</p>
+        </div>
+      </div>
+      {topAudits.length === 0 ? (
+        <p className="text-muted">{t('import.noAudits', { defaultValue: 'No audit events yet — start an upload to log activity.' })}</p>
+      ) : (
+        <ul className="audit-list">
+          {topAudits.map((audit) => (
+            <li key={audit.id}>
+              <strong>{new Date(audit.createdAt).toLocaleString()}</strong> — {formatAuditMessage(audit)}
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

@@ -25,33 +25,42 @@ export const casesService = {
       };
     }
 
-    const take = filters.limit + 1;
+    const limit = filters.limit;
+    const cursor = filters.cursor;
     const sortBy = filters.sortBy ?? 'createdAt';
     const sortOrder = filters.sortOrder ?? 'desc';
 
-    const orderBy: Prisma.CaseOrderByWithRelationInput = {
-      [sortBy]: sortOrder
+    const orderBy: Prisma.CaseOrderByWithRelationInput[] = [
+      { [sortBy]: sortOrder } as Prisma.CaseOrderByWithRelationInput,
+      { id: sortOrder }
+    ];
+
+    const [records, total] = await Promise.all([
+      prisma.case.findMany({
+        where,
+        orderBy,
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0,
+        include: {
+          assignee: { select: { id: true, email: true } },
+          createdBy: { select: { id: true, email: true } }
+        }
+      }),
+      prisma.case.count({ where })
+    ]);
+
+    const hasNext = records.length > limit;
+    const cases = hasNext ? records.slice(0, limit) : records;
+    const nextCursor = hasNext ? cases[cases.length - 1]?.id ?? null : null;
+
+    return {
+      cases,
+      pageSize: limit,
+      total,
+      hasNext,
+      nextCursor
     };
-
-    const cases = await prisma.case.findMany({
-      where,
-      orderBy,
-      take,
-      skip: filters.cursor ? 1 : 0,
-      cursor: filters.cursor ? { id: filters.cursor } : undefined,
-      include: {
-        assignee: { select: { id: true, email: true } },
-        createdBy: { select: { id: true, email: true } }
-      }
-    });
-
-    let nextCursor: string | null = null;
-    if (cases.length > filters.limit) {
-      const next = cases.pop();
-      nextCursor = next?.id ?? null;
-    }
-
-    return { cases, nextCursor };
   },
 
   async getById(id: string) {

@@ -13,9 +13,9 @@ import {
 const router = Router();
 
 router.get('/', authenticate(), listImportsHandler);
-router.post('/', authenticate(), createImportHandler);
+router.post('/', authenticate(['ADMIN']), createImportHandler);
 router.get('/:id', authenticate(), getImportHandler);
-router.post('/:id/chunks', authenticate(), processChunkHandler);
+router.post('/:id/chunks', authenticate(['ADMIN']), processChunkHandler);
 router.get('/:id/errors', authenticate(), getImportErrorsHandler);
 router.get('/:id/errors.csv', authenticate(), downloadImportErrorsHandler);
 

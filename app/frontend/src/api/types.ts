@@ -44,8 +44,11 @@ export type CaseDetail = CaseRecord & {
   notes: CaseNote[];
 };
 
-export type PaginatedResponse<T> = {
-  cases: T[];
+export type CasesResponse = {
+  cases: CaseRecord[];
+  pageSize: number;
+  total: number;
+  hasNext: boolean;
   nextCursor: string | null;
 };
 
@@ -58,6 +61,7 @@ export type ImportJob = {
   status: 'DRAFT' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   createdAt: string;
   completedAt?: string | null;
+  createdBy?: { id: string; email: string } | null;
 };
 
 export type ImportError = {
@@ -76,4 +80,24 @@ export type CaseRowInput = {
   category: CaseCategory;
   priority: CasePriority;
   status?: CaseStatus;
+};
+
+export type ImportAuditEntry = {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type ImportReportPayload = ImportJob & {
+  errors: ImportError[];
+  audits: ImportAuditEntry[];
+};
+
+export type ImportListResponse = {
+  imports: ImportJob[];
+  pageSize: number;
+  total: number;
+  hasNext: boolean;
+  nextCursor: string | null;
 };

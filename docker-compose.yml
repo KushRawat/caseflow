@@ -19,7 +19,7 @@ services:
       DATABASE_URL: postgresql://caseflow:caseflow@postgres:5432/caseflow?schema=public
       JWT_ACCESS_SECRET: supersecretaccesskeysupersecretaccesskey
       JWT_REFRESH_SECRET: supersecretrefreshkeysupersecretrefreshkey
-      ACCESS_TOKEN_TTL: 15m
+      ACCESS_TOKEN_TTL: 2m
       REFRESH_TOKEN_TTL: 7d
       ALLOWED_ORIGINS: http://localhost:5173
     ports:

@@ -21,6 +21,7 @@ interface DataGridProps {
   onToggleRow: (rowId: string) => void;
   onSelectAll: (selected: boolean) => void;
   onEdit: (rowId: string, header: string, value: string) => void;
+  readOnly?: boolean;
 }
 
 export const DataGrid = ({
@@ -31,7 +32,8 @@ export const DataGrid = ({
   selectedRowIds,
   onToggleRow,
   onSelectAll,
-  onEdit
+  onEdit,
+  readOnly = false
 }: DataGridProps) => {
   const orderedHeaders = columnOrder.length ? columnOrder : headers;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -40,15 +42,16 @@ export const DataGrid = ({
     () => ({
       id: 'select',
       header: () => (
-        <input
-          type="checkbox"
-          aria-label="Select all rows"
-          checked={allSelected}
-          ref={(input) => {
-            if (input) input.indeterminate = selectedRowIds.length > 0 && !allSelected;
-          }}
-          onChange={(event) => onSelectAll(event.target.checked)}
-        />
+          <input
+            type="checkbox"
+            aria-label="Select all rows"
+            checked={allSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = selectedRowIds.length > 0 && !allSelected;
+            }}
+            disabled={readOnly}
+            onChange={(event) => onSelectAll(event.target.checked)}
+          />
       ),
       cell: (info) => {
         const row = info.row.original;
@@ -58,6 +61,7 @@ export const DataGrid = ({
             type="checkbox"
             aria-label={`Select row ${row.rowNumber}`}
             checked={selected}
+            disabled={readOnly}
             onChange={() => onToggleRow(row.id)}
           />
         );
@@ -86,6 +90,7 @@ export const DataGrid = ({
                 aria-label={`${header} row ${row.rowNumber}`}
                 className={hasError ? 'cell-error' : ''}
                 value={value}
+                disabled={readOnly}
                 onChange={(event) => onEdit(row.id, header, event.target.value)}
               />
               {hasError && <span className="error-text">{row.errors[fieldWithError!]}</span>}
@@ -112,11 +117,20 @@ export const DataGrid = ({
   const rowVirtualizer = useVirtualizer({
     count: rowModel.rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 56
+    getItemKey: (index) => rowModel.rows[index]?.id ?? index,
+    estimateSize: () => 80,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 0
   });
 
   return (
-    <div className="grid-scroll" ref={parentRef} role="grid" aria-rowcount={rowModel.rows.length} aria-multiselectable>
+    <div
+      className={`grid-scroll virtualized${readOnly ? ' read-only' : ''}`}
+      ref={parentRef}
+      role="grid"
+      aria-rowcount={rowModel.rows.length}
+      aria-multiselectable
+      aria-readonly={readOnly}
+    >
       <table className="table">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -136,6 +150,7 @@ export const DataGrid = ({
                     aria-label={`Filter ${header.id}`}
                     placeholder="Filter"
                     value={(header.column.getFilterValue() as string) ?? ''}
+                    disabled={readOnly}
                     onChange={(event) => header.column.setFilterValue(event.target.value)}
                   />
                 ) : null}
@@ -148,9 +163,15 @@ export const DataGrid = ({
             <td style={{ position: 'relative', height: `${rowVirtualizer.getTotalSize()}px` }} colSpan={columns.length}>
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const row = rowModel.rows[virtualRow.index];
+                if (!row) return null;
                 return (
                   <table
                     key={row.id}
+                    ref={(element) => {
+                      if (element) {
+                        rowVirtualizer.measureElement(element);
+                      }
+                    }}
                     style={{
                       position: 'absolute',
                       top: 0,

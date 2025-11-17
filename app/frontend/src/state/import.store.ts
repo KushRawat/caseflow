@@ -27,7 +27,10 @@ type ImportState = {
     success: number;
     failure: number;
     failedChunks: number[];
-    status: 'idle' | 'uploading' | 'done';
+    status: 'idle' | 'uploading' | 'done' | 'cancelled';
+    created: number;
+    updated: number;
+    lastError?: string;
   };
   sourceName?: string;
   selectedRowIds: string[];
@@ -46,6 +49,7 @@ type ImportStore = ImportState & {
   toggleRowSelection: (rowId: string) => void;
   selectAllRows: (selected: boolean) => void;
   clearSelection: () => void;
+  revalidateRow: (rowId: string) => void;
   clear: () => void;
 };
 
@@ -62,6 +66,27 @@ const createRow = (values: Record<string, string>, index: number): CsvRow => ({
   values,
   errors: {}
 });
+
+const summarizeRows = (rows: CsvRow[]) => {
+  const valid = rows.filter((row) => Object.keys(row.errors).length === 0).length;
+  return { valid, invalid: rows.length - valid };
+};
+
+const buildCaseIdSet = (rows: CsvRow[], mapping: SchemaMapping, excludeRowId?: string) => {
+  const caseHeader = mapping.caseId;
+  const seen = new Set<string>();
+  if (!caseHeader) return seen;
+  for (const row of rows) {
+    if (row.id === excludeRowId) continue;
+    const rawValue = row.values[caseHeader];
+    if (rawValue === undefined || rawValue === null) continue;
+    const trimmed = rawValue.toString().trim();
+    if (trimmed) {
+      seen.add(trimmed);
+    }
+  }
+  return seen;
+};
 
 export const importStore = create<ImportStore>((set, get) => ({
   headers: [],
@@ -95,8 +120,12 @@ export const importStore = create<ImportStore>((set, get) => ({
   },
   updateCell(rowId, header, value) {
     set((state) => ({
-      rows: state.rows.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [header]: value } } : row))
+      rows: state.rows.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [header]: value } } : row)),
+      status: 'ready',
+      validationSummary: undefined,
+      submitProgress: undefined
     }));
+    get().revalidateRow(rowId);
   },
   applyFix(field, transform, options) {
     const header = get().mapping[field];
@@ -112,8 +141,14 @@ export const importStore = create<ImportStore>((set, get) => ({
               ? row.values[header]
               : transform((row.values[header] ?? '').toString())
         }
-      }))
+      })),
+      status: 'ready',
+      validationSummary: undefined,
+      submitProgress: undefined
     }));
+    if (targetRowIds && targetRowIds.length > 0) {
+      targetRowIds.forEach((rowId) => get().revalidateRow(rowId));
+    }
   },
   setFieldValue(field, value, options) {
     const header = get().mapping[field];
@@ -126,8 +161,14 @@ export const importStore = create<ImportStore>((set, get) => ({
           ...row.values,
           [header]: targetRowIds && !targetRowIds.includes(row.id) ? row.values[header] : value
         }
-      }))
+      })),
+      status: 'ready',
+      validationSummary: undefined,
+      submitProgress: undefined
     }));
+    if (targetRowIds && targetRowIds.length > 0) {
+      targetRowIds.forEach((rowId) => get().revalidateRow(rowId));
+    }
   },
   validate() {
     const state = get();
@@ -137,13 +178,10 @@ export const importStore = create<ImportStore>((set, get) => ({
       return { ...row, errors: result.errors, normalized: result.normalized };
     });
 
-    const valid = updatedRows.filter((row) => Object.keys(row.errors).length === 0).length;
-    const invalid = updatedRows.length - valid;
-
     set({
       rows: updatedRows,
       status: 'validated',
-      validationSummary: { valid, invalid }
+      validationSummary: summarizeRows(updatedRows)
     });
   },
   setImportId(id) {
@@ -173,6 +211,22 @@ export const importStore = create<ImportStore>((set, get) => ({
   },
   clearSelection() {
     set({ selectedRowIds: [] });
+  },
+  revalidateRow(rowId) {
+    const state = get();
+    const target = state.rows.find((row) => row.id === rowId);
+    if (!target) return;
+    const seenCaseIds = buildCaseIdSet(state.rows, state.mapping, rowId);
+    const result: RowValidationResult = validateRow(target.values, state.mapping, seenCaseIds);
+    set((current) => {
+      const nextRows = current.rows.map((row) =>
+        row.id === rowId ? { ...row, errors: result.errors, normalized: result.normalized } : row
+      );
+      return {
+        rows: nextRows,
+        validationSummary: summarizeRows(nextRows)
+      };
+    });
   },
   clear() {
     set({

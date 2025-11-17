@@ -9,7 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  ACCESS_TOKEN_TTL: z.string().default('15m'),
+  ACCESS_TOKEN_TTL: z.string().default('2m'),
   REFRESH_TOKEN_TTL: z.string().default('7d'),
   SENTRY_DSN: z.string().optional().or(z.literal('')),
   ALLOWED_ORIGINS: z.string().default('*')
