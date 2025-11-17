@@ -10,7 +10,8 @@ type AuthResponse = {
 export const login = (payload: { email: string; password: string }) =>
   apiClient.post<AuthResponse>('/auth/login', payload);
 
-export const refresh = () => apiClient.post<{ accessToken: string; refreshToken: string }>('/auth/refresh');
+export const refresh = (refreshToken?: string) =>
+  apiClient.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });
 
 export const logout = (refreshToken?: string) => apiClient.post<void>('/auth/logout', { refreshToken });
 

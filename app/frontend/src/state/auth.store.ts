@@ -82,7 +82,7 @@ export const authStore = create<AuthStore>()(
         if (refreshPromise) return refreshPromise;
         refreshPromise = (async () => {
           try {
-            const refreshed = await refresh();
+            const refreshed = await refresh(refreshToken);
             const profile = await me();
             set({
               status: 'authenticated',
