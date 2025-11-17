@@ -21,8 +21,8 @@ import { schemaFields } from '../../utils/schema';
 import { notifyError, notifyInfo, notifySuccess } from '../../utils/toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-const CHUNK_SIZE = 500;
-const CHUNK_RETRY_LIMIT = 3;
+const CHUNK_SIZE = 300;
+const CHUNK_RETRY_LIMIT = 2;
 
 export const ImportPage = () => {
   const queryClient = useQueryClient();
@@ -204,7 +204,7 @@ export const ImportPage = () => {
           success,
           failure,
           failedChunks,
-          status: 'uploading',
+          status: cancelUploadRef.current ? 'cancelled' : 'uploading',
           created,
           updated,
           lastError
